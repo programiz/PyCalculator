@@ -11,6 +11,7 @@ LIGHT_BLUE = "#CCEDFF"
 LIGHT_GRAY = "#F5F5F5"
 LABEL_COLOR = "#25265E"
 
+# This calculator is used for good
 
 class Calculator:
     def __init__(self):
