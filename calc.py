@@ -162,6 +162,9 @@ class Calculator:
     def run(self):
         self.window.mainloop()
 
+    def trigonometric(self):
+        # to be implemented
+        return
 
 if __name__ == "__main__":
     calc = Calculator()
