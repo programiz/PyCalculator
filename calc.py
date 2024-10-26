@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk, os
 
 LARGE_FONT_STYLE = ("Arial", 40, "bold")
 SMALL_FONT_STYLE = ("Arial", 16)
@@ -14,16 +14,19 @@ LABEL_COLOR = "#25265E"
 
 class Calculator:
     def __init__(self):
+        directory = os.getcwd().replace('\\', '/')
         self.window = tk.Tk()
-        self.window.geometry("375x667")
+        self.window.geometry("375x467")
         self.window.resizable(0, 0)
-        self.window.title("Calculator")
-
+        self.window.title("::-Calculator-::")
+        self.window.iconphoto(False, tk.PhotoImage(file=directory+'/calc3.png'))
         self.total_expression = ""
         self.current_expression = ""
         self.display_frame = self.create_display_frame()
+        self.ret=True
 
         self.total_label, self.label = self.create_display_labels()
+        self.entrou=1
 
         self.digits = {
             7: (1, 1), 8: (1, 2), 9: (1, 3),
@@ -45,11 +48,22 @@ class Calculator:
 
     def bind_keys(self):
         self.window.bind("<Return>", lambda event: self.evaluate())
+        self.window.bind("<KP_Enter>", lambda event: self.evaluate())
+        self.window.bind("<Escape>", lambda event: self.clear())
+        self.window.bind("<KP_Multiply>", lambda event, operator="*": self.append_operator(operator))
+        self.window.bind("<KP_Add>", lambda event, operator="+": self.append_operator(operator))
+        self.window.bind("<KP_Subtract>", lambda event, operator="-": self.append_operator(operator))
+        self.window.bind("<KP_Decimal>", lambda event, operator=".": self.add_to_expression(operator))
+        self.window.bind("<KP_Separator>", lambda event, operator=".": self.add_to_expression(operator))
+        self.window.bind("<KP_Divide>", lambda event, operator="/": self.append_operator(operator))
+        self.window.bind("<BackSpace>", lambda event: self.minus_expression())
         for key in self.digits:
             self.window.bind(str(key), lambda event, digit=key: self.add_to_expression(digit))
-
+            if key != ".":
+                self.window.bind('<KP_'+ str(key) + '>', lambda event,digit=key: self.add_to_expression(digit))
         for key in self.operations:
             self.window.bind(key, lambda event, operator=key: self.append_operator(operator))
+            
 
     def create_special_buttons(self):
         self.create_clear_button()
@@ -74,9 +88,23 @@ class Calculator:
         return frame
 
     def add_to_expression(self, value):
-        self.current_expression += str(value)
+        if(self.entrou==0):
+            if("." in self.current_expression and value!='.'):
+                self.current_expression += str(value)
+            elif (not "." in self.current_expression and value!='.'):
+                self.current_expression += str(value)
+            elif (not "." in self.current_expression and value=='.'):
+                self.current_expression += str(value)
+        elif(self.entrou==1):
+                self.current_expression=""
+                self.current_expression=str(value)
+                self.entrou=0
         self.update_label()
-
+	
+    def minus_expression(self):
+        self.current_expression = self.current_expression[:-1]
+        self.update_label()
+    
     def create_digit_buttons(self):
         for digit, grid_value in self.digits.items():
             button = tk.Button(self.buttons_frame, text=str(digit), bg=WHITE, fg=LABEL_COLOR, font=DIGITS_FONT_STYLE,
@@ -84,6 +112,10 @@ class Calculator:
             button.grid(row=grid_value[0], column=grid_value[1], sticky=tk.NSEW)
 
     def append_operator(self, operator):
+        subs = self.total_expression[len(self.total_expression)-1:]
+        for key in self.operations:
+            if (subs==str(key) and self.current_expression==''):
+                return
         self.current_expression += operator
         self.total_expression += self.current_expression
         self.current_expression = ""
@@ -103,6 +135,7 @@ class Calculator:
         self.total_expression = ""
         self.update_label()
         self.update_total_label()
+        self.entrou=1
 
     def create_clear_button(self):
         button = tk.Button(self.buttons_frame, text="C", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,
@@ -128,15 +161,17 @@ class Calculator:
         button.grid(row=0, column=3, sticky=tk.NSEW)
 
     def evaluate(self):
+        if(self.current_expression==""):
+            return
         self.total_expression += self.current_expression
         self.update_total_label()
         try:
             self.current_expression = str(eval(self.total_expression))
-
             self.total_expression = ""
         except Exception as e:
             self.current_expression = "Error"
         finally:
+            self.entrou=1
             self.update_label()
 
     def create_equals_button(self):
