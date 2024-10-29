@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk, os
 
 LARGE_FONT_STYLE = ("Arial", 40, "bold")
 SMALL_FONT_STYLE = ("Arial", 16)
@@ -14,17 +14,19 @@ LABEL_COLOR = "#25265E"
 
 class Calculator:
     def __init__(self):
+        directory = os.getcwd().replace('\\', '/')
         self.window = tk.Tk()
-        self.window.geometry("375x667")
+        self.window.geometry("375x467")
         self.window.resizable(0, 0)
-        self.window.title("Calculator")
-
+        self.window.title("::-Calculator-::")
+        self.window.iconphoto(False, tk.PhotoImage(file=directory+'/calc3.png'))
         self.total_expression = ""
         self.current_expression = ""
+        self.mem=0
         self.display_frame = self.create_display_frame()
 
-        self.total_label, self.label = self.create_display_labels()
-
+        self.total_label, self.label, self.memol = self.create_display_labels()
+        self.entrou=1
         self.digits = {
             7: (1, 1), 8: (1, 2), 9: (1, 3),
             4: (2, 1), 5: (2, 2), 6: (2, 3),
@@ -45,17 +47,33 @@ class Calculator:
 
     def bind_keys(self):
         self.window.bind("<Return>", lambda event: self.evaluate())
+        self.window.bind("<KP_Enter>", lambda event: self.evaluate())
+        self.window.bind("<Escape>", lambda event: self.clear())
+        self.window.bind("<KP_Multiply>", lambda event, operator="*": self.append_operator(operator))
+        self.window.bind("<KP_Add>", lambda event, operator="+": self.append_operator(operator))
+        self.window.bind("<KP_Subtract>", lambda event, operator="-": self.append_operator(operator))
+        self.window.bind("<KP_Decimal>", lambda event, operator=".": self.add_to_expression(operator))
+        self.window.bind("<KP_Separator>", lambda event, operator=".": self.add_to_expression(operator))
+        self.window.bind("<KP_Divide>", lambda event, operator="/": self.append_operator(operator))
+        self.window.bind("<BackSpace>", lambda event: self.minus_expression())
         for key in self.digits:
             self.window.bind(str(key), lambda event, digit=key: self.add_to_expression(digit))
-
+            if key != ".":
+                self.window.bind('<KP_'+ str(key) + '>', lambda event,digit=key: self.add_to_expression(digit))
         for key in self.operations:
             self.window.bind(key, lambda event, operator=key: self.append_operator(operator))
+            
 
     def create_special_buttons(self):
         self.create_clear_button()
         self.create_equals_button()
         self.create_square_button()
         self.create_sqrt_button()
+        self.create_perc_button()
+        self.create_mc_button()
+        self.create_mr_button()
+        self.create_mplus_button()
+        self.create_mminus_button()
 
     def create_display_labels(self):
         total_label = tk.Label(self.display_frame, text=self.total_expression, anchor=tk.E, bg=LIGHT_GRAY,
@@ -65,8 +83,12 @@ class Calculator:
         label = tk.Label(self.display_frame, text=self.current_expression, anchor=tk.E, bg=LIGHT_GRAY,
                          fg=LABEL_COLOR, padx=24, font=LARGE_FONT_STYLE)
         label.pack(expand=True, fill='both')
+        
+        memol = tk.Label(self.display_frame, text="", anchor=tk.E, bg=LIGHT_GRAY,
+                               fg=LABEL_COLOR, padx=24, font=SMALL_FONT_STYLE)
+        memol.pack(expand=True, fill='both')
 
-        return total_label, label
+        return total_label, label, memol
 
     def create_display_frame(self):
         frame = tk.Frame(self.window, height=221, bg=LIGHT_GRAY)
@@ -74,9 +96,23 @@ class Calculator:
         return frame
 
     def add_to_expression(self, value):
-        self.current_expression += str(value)
+        if(self.entrou==0):
+            if("." in self.current_expression and value!='.'):
+                self.current_expression += str(value)
+            elif (not "." in self.current_expression and value!='.'):
+                self.current_expression += str(value)
+            elif (not "." in self.current_expression and value=='.'):
+                self.current_expression += str(value)
+        elif(self.entrou==1):
+                self.current_expression=""
+                self.current_expression=str(value)
+                self.entrou=0
         self.update_label()
-
+	
+    def minus_expression(self):
+        self.current_expression = self.current_expression[:-1]
+        self.update_label()
+    
     def create_digit_buttons(self):
         for digit, grid_value in self.digits.items():
             button = tk.Button(self.buttons_frame, text=str(digit), bg=WHITE, fg=LABEL_COLOR, font=DIGITS_FONT_STYLE,
@@ -84,6 +120,10 @@ class Calculator:
             button.grid(row=grid_value[0], column=grid_value[1], sticky=tk.NSEW)
 
     def append_operator(self, operator):
+        subs = self.total_expression[len(self.total_expression)-1:]
+        for key in self.operations:
+            if (subs==str(key) and self.current_expression==''):
+                return
         self.current_expression += operator
         self.total_expression += self.current_expression
         self.current_expression = ""
@@ -98,16 +138,10 @@ class Calculator:
             button.grid(row=i, column=4, sticky=tk.NSEW)
             i += 1
 
-    def clear(self):
-        self.current_expression = ""
-        self.total_expression = ""
-        self.update_label()
-        self.update_total_label()
-
     def create_clear_button(self):
         button = tk.Button(self.buttons_frame, text="C", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,
                            borderwidth=0, command=self.clear)
-        button.grid(row=0, column=1, sticky=tk.NSEW)
+        button.grid(row=0, column=0, sticky=tk.NSEW)
 
     def square(self):
         self.current_expression = str(eval(f"{self.current_expression}**2"))
@@ -116,27 +150,62 @@ class Calculator:
     def create_square_button(self):
         button = tk.Button(self.buttons_frame, text="x\u00b2", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,
                            borderwidth=0, command=self.square)
-        button.grid(row=0, column=2, sticky=tk.NSEW)
+        button.grid(row=0, column=1, sticky=tk.NSEW)
 
     def sqrt(self):
         self.current_expression = str(eval(f"{self.current_expression}**0.5"))
         self.update_label()
-
+    
     def create_sqrt_button(self):
         button = tk.Button(self.buttons_frame, text="\u221ax", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,
                            borderwidth=0, command=self.sqrt)
-        button.grid(row=0, column=3, sticky=tk.NSEW)
+        button.grid(row=0, column=2, sticky=tk.NSEW)
+    
+    def perc(self):
+        if(self.total_expression==""):
+            return
+        self.current_expression = str(eval(f"{self.total_expression[:-1]}*{self.current_expression}/100"))
+        self.update_label()        
 
+    def create_mc_button(self):
+        button = tk.Button(self.buttons_frame, text="MC", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,\
+                           borderwidth=0, command=lambda opm='MC':self.memoria(opm))
+        button.grid(row=1, column=0, sticky=tk.NSEW)        
+    
+    def create_mr_button(self):
+        button = tk.Button(self.buttons_frame, text="MR", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,\
+                           borderwidth=0, command=lambda opm='MR':self.memoria(opm))
+        button.grid(row=2, column=0, sticky=tk.NSEW)        
+    
+    def create_mplus_button(self):
+        button = tk.Button(self.buttons_frame, text="M+", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,\
+                           borderwidth=0, command=lambda opm='M+':self.memoria(opm))
+        button.grid(row=3, column=0, sticky=tk.NSEW)
+    
+    def create_mminus_button(self):
+        button = tk.Button(self.buttons_frame, text="M-", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,\
+                           borderwidth=0, command=lambda opm='M-':self.memoria(opm))
+        button.grid(row=4, column=0, sticky=tk.NSEW)
+
+    def create_perc_button(self):
+        button = tk.Button(self.buttons_frame, text="%", bg=OFF_WHITE, fg=LABEL_COLOR, font=DEFAULT_FONT_STYLE,
+                           borderwidth=0, command=self.perc)
+        button.grid(row=0, column=3, sticky=tk.NSEW)
+    
+      
+    
     def evaluate(self):
+        if(self.current_expression==""):
+            return
         self.total_expression += self.current_expression
         self.update_total_label()
         try:
             self.current_expression = str(eval(self.total_expression))
-
             self.total_expression = ""
         except Exception as e:
             self.current_expression = "Error"
         finally:
+            self.entrou=1
             self.update_label()
 
     def create_equals_button(self):
@@ -157,6 +226,39 @@ class Calculator:
 
     def update_label(self):
         self.label.config(text=self.current_expression[:11])
+
+    def clear(self):
+        self.current_expression = ""
+        self.total_expression = ""
+        self.update_label()
+        self.update_total_label()
+        self.entrou=1
+        
+    def memoria(self,opm):
+        if (self.current_expression == "" and opm !="MR" and opm !="MC"):
+            return
+        if opm=="MC":
+            self.mem=0
+            self.memol.config(text="")
+            self.clear
+        elif opm=="MR":
+            self.current_expression = ""         
+            self.current_expression = str(self.mem)
+            self.entrou=1
+            self.update_label()
+        elif opm=="MS":
+            self.mem=float(self.current_expression)
+            self.memol.config(text="M: "+str(self.mem))
+        elif opm=="M+":
+            self.mem=self.mem + float(self.current_expression)
+            self.memol.config(text="M: "+str(self.mem))
+        elif opm=="M-":
+            self.mem=self.mem - float(self.current_expression)
+            self.memol.config(text="M: "+str(self.mem))
+            self.current_expression = str(self.mem)
+            self.entrou=1
+            self.update_label()
+    #-#------------------- Fim Memoria ---- -------------#-#
 
     def run(self):
         self.window.mainloop()
